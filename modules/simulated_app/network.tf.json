@@ -5,7 +5,7 @@
                 {
                     "type": "string",
                     "default": "phase-3",
-                    "description": "Nombre del servidor local"
+                    "description": "Cambio hecho para la fase 3"
                 }
             ]
         },
