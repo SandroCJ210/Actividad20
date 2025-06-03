@@ -156,7 +156,7 @@ Luego verifique con `terraform plan` que el resultado es igual al script legacy.
 ### Control de versiones comunica contexto
 Se realizaron dos commits, cada uno cambió un campo de la variable name.
 
-![commits](image.png)
+![commits](img/image-15.png)
 ### Linting y formateo
 
 Luego de instalar jq se ejecutó el siguiente comando:
