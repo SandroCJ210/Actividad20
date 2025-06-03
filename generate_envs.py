@@ -13,6 +13,11 @@ def render_and_write(env):
     env_dir = os.path.join(OUT_DIR, env["name"])
     os.makedirs(env_dir, exist_ok=True)
 
+    for f in ["network.tf.json", "main.tf.json"]:
+        fpath = os.path.join(env_dir, f)
+        if os.path.exists(fpath):
+            os.remove(fpath)
+            
     # 1) Copia la definición de variables (network.tf.json)
     copyfile(
         os.path.join(MODULE_DIR, "network.tf.json"),
@@ -30,6 +35,7 @@ def render_and_write(env):
                                 "triggers": {
                                     "name":    env["name"],
                                     "network": env["network"]
+                                    #"network": "${var.network}"
                                 },
                                 "provisioner": [
                                     {
@@ -37,6 +43,7 @@ def render_and_write(env):
                                             "command": (
                                                 f"echo 'Arrancando servidor "
                                                 f"{env['name']} en red {env['network']}'"
+                                                #f"{env['name']} en red ${{var.network}}"
                                             )
                                         }
                                     }
@@ -54,9 +61,6 @@ def render_and_write(env):
 
 if __name__ == "__main__":
     # Limpia entornos viejos (si quieres)
-    if os.path.isdir(OUT_DIR):
-        import shutil
-        shutil.rmtree(OUT_DIR)
 
     for env in ENVS:
         render_and_write(env)
