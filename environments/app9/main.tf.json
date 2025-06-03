@@ -3,18 +3,19 @@
         {
             "null_resource": [
                 {
-                    "app9": [
+                    "local_server": [
                         {
                             "provisioner": [
                                 {
                                     "local-exec": {
-                                        "command": "echo 'Arrancando servidor app9 en red net9'"
+                                        "command": "echo 'Arrancando servidor en red net9 en el puerto ${var.port}'"
                                     }
                                 }
                             ],
                             "triggers": {
                                 "name": "app9",
-                                "network": "net9"
+                                "network": "net9",
+                                "port": "${var.port}"
                             }
                         }
                     ]

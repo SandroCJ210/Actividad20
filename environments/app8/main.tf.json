@@ -3,18 +3,19 @@
         {
             "null_resource": [
                 {
-                    "app8": [
+                    "local_server": [
                         {
                             "provisioner": [
                                 {
                                     "local-exec": {
-                                        "command": "echo 'Arrancando servidor app8 en red net8'"
+                                        "command": "echo 'Arrancando servidor en red net8 en el puerto ${var.port}'"
                                     }
                                 }
                             ],
                             "triggers": {
                                 "name": "app8",
-                                "network": "net8"
+                                "network": "net8",
+                                "port": "${var.port}"
                             }
                         }
                     ]

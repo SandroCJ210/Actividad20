@@ -1,5 +1,5 @@
 ### Actividad: Escribiendo infraestructura como código en un entorno local con Terraform
-
+Add commentMore actions
 #### Fase 0: Preparación 
 Revisamos el proyecto de la actividad
 
@@ -152,33 +152,242 @@ Luego verifique con `terraform plan` que el resultado es igual al script legacy.
 
 ![alt text](img/image-12.png)
 
-#### Fase 3: Escribiendo código limpio en IaC 
+# Fase 3
+### Control de versiones comunica contexto
+Se realizaron dos commits, cada uno cambió un campo de la variable name.
 
-| Conceptos                       | Ejercicio rápido                                                                                               |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| **Control de versiones comunica contexto** | - Haz 2 commits: uno que cambie `default` de `name`; otro que cambie `description`. Revisar mensajes claros. |
-| **Linting y formateo**                     | - Instala `jq`. Ejecutar `jq . network.tf.json > tmp && mv tmp network.tf.json`. ¿Qué cambió?                 |
-| **Nomenclatura de recursos**               | - Renombra en `main.tf.json` el recurso `null_resource` a `local_server`. Ajustar generador Python.           |
-| **Variables y constantes**                 | - Añade variable `port` en `network.tf.json` y usarla en el `command`. Regenerar entorno.                     |
-| **Parametrizar dependencias**              | - Genera `env3` de modo que su `network` dependa de `env2` (p.ej. `net2-peered`). Implementarlo en Python.    |
-| **Mantener en secreto**                    | - Marca `api_key` como **sensitive** en el JSON y leerla desde `os.environ`, sin volcarla en disco.           |
+![commits](image.png)
+### Linting y formateo
 
-#### Fase 4: Integración final y discusión
+Luego de instalar jq se ejecutó el siguiente comando:
+```
+jq . network.tf.json > tmp && mv tmp network.tf.json
+```
+**¿Qué cambió?**
 
-1. **Recorrido** por:
+Se nota que la indentación y la sangría del archivo network.tf.json ha cambiado. Y justo ese es el objetivo de usar jq, ya que una de las funcionalidades de este comando sirve es formatear archivos. 
 
-   * Detección de drift (*remediation*).
-   * Migración de legacy.
-   * Estructura limpia, módulos, variables sensibles.
-2. **Preguntas abiertas**:
+Antes:
+```json
+{
+    "variable": [
+        {
+            "name": [
+                {
+                    "type": "string",
+                    "default": "hello-world",
+                    "description": "Nombre del servidor local"
+                }
+            ]
+        },
+        {
+            "network": [
+                {
+                    "type": "string",
+                    "default": "local-network",
+                    "description": "Nombre de la red local"
+                }
+            ]
+        }
+    ]
+}
+```
 
-   * ¿Cómo extenderías este patrón para 50 módulos y 100 entornos?
-   * ¿Qué prácticas de revisión de código aplicarías a los `.tf.json`?
-   * ¿Cómo gestionarías secretos en producción (sin Vault)?
-   * ¿Qué workflows de revisión aplicarías a los JSON generados?
+Después:
+```json
+{
+  "variable": [
+    {
+      "name": [
+        {
+          "type": "string",
+          "default": "hello-world",
+          "description": "Nombre del servidor local"
+        }
+      ]
+    },
+    {
+      "network": [
+        {
+          "type": "string",
+          "default": "local-network",
+          "description": "Nombre de la red local"
+        }
+      ]
+    }
+  ]
+}
 
+```
 
-#### Ejercicios
+### Nomenclatura de recursos
+Se cambió el nombre del recurso a "local_server" en main.tf.json
+
+```json
+{
+  "resource": [
+    {
+      "null_resource": [
+        {
+          "local_server": [
+            {
+              "triggers": {
+                "name": "${var.name}",
+                "network": "${var.network}"
+              },
+              "provisioner": [
+                {
+                  "local-exec": {
+                    "command": "echo 'Arrancando servidor ${var.name} en red ${var.network}'"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+```
+
+Además, se tuvo que cambiar la variable config en generate_envs.py para que también tenga el recurso con nombre "local_server" en vez de "app[i]"
+
+```python
+config = {
+    "resource": [
+        {
+            "null_resource": [
+                {
+                    "local_server": [
+                        {
+                            "triggers": {
+                                "name":    env["name"],
+                                "network": env["network"],
+                                "port": "${var.port}"
+                            },
+                            "provisioner": [
+                                {
+                                    "local-exec": {
+                                        "command": (
+                                            f"echo 'Arrancando servidor "
+                                            f"{env['name']} en red {env['network']}'"
+                                            f" en el puerto ${var.port}"
+                                        )
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+```
+
+### Variables y constantes
+
+Se añadió la variable port.
+
+```json
+{
+  "port": [
+    {
+      "type": "number",
+      "default": 8080,
+      "description": "Puerto del servidor local"
+    }
+  ]
+}
+```
+
+Además, se modificó main.tf.json para que se use en el comando.
+
+```json
+"provisioner": [
+  {
+    "local-exec": {
+      "command": "echo 'Arrancando servidor ${var.name} en red ${var.network}, en el puerto ${var.port}'"
+    }
+  }
+]
+```
+
+También se tiene que hacer la modificación en generate_envs.py
+
+```python
+    config = {
+        "resource": [
+            {
+                "null_resource": [
+                    {
+                        "local_server": [
+                            {
+                                "triggers": {
+                                    "name":    env["name"],
+                                    "network": env["network"],
+                                    "port": "${var.port}"
+                                },
+                                "provisioner": [
+                                    {
+                                        "local-exec": {
+                                            "command": (
+                                                f"echo 'Arrancando servidor "
+                                                f"{env['name']} en red {env['network']}'"
+                                                "en el puerto ${var.port}"
+                                            )
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+```
+
+### Parametrizar dependencias
+
+Para esto se cambia la network del tercer enviroment a net2-peered.
+
+```python
+ENVS = []
+for i in range(1, 11):
+    if i == 3:
+        env = {"name": f"app{i}", "network": "net2-peered"}
+    else:
+        env = {"name": f"app{i}", "network": f"net{i}"}
+    ENVS.append(env)
+```
+
+### Mantener en secreto
+Se añadió una variable "api_key" en network.tf.json
+```json
+{
+  "api_key": [
+    {
+      "type": "string",
+      "description": "Clave API para autentificación",
+      "sensitive": true
+    }
+  ]
+}
+```
+
+No se añadió el campo default porque no queremos que su valor esté en disco.
+
+En generate_envs.py se usa os.environ para obtener la api_key como una variable de entorno en el sistema llamada "API_KEY"
+
+```python
+api_key = os.environ.get("API_KEY")
+if api_key is None:
+    raise Exception("No se obtuvo la variable de entorno API_KEY")
+```
+## Ejercicios
 
 1. **Drift avanzado**
 
@@ -282,3 +491,9 @@ Por último, con `terraform apply` terraform corrige el drift y observamos como 
 5. **Compartición segura de secretos**
 
    * Diseña un mini-workflow donde `api_key` se lee de `~/.config/secure.json` (no versionado) y documenta cómo el equipo la distribuye sin comprometer seguridad.
+
+
+
+
+
+

@@ -3,18 +3,19 @@
         {
             "null_resource": [
                 {
-                    "app4": [
+                    "local_server": [
                         {
                             "provisioner": [
                                 {
                                     "local-exec": {
-                                        "command": "echo 'Arrancando servidor app4 en red net4'"
+                                        "command": "echo 'Arrancando servidor en red net4 en el puerto ${var.port}'"
                                     }
                                 }
                             ],
                             "triggers": {
                                 "name": "app4",
-                                "network": "net4"
+                                "network": "net4",
+                                "port": "${var.port}"
                             }
                         }
                     ]

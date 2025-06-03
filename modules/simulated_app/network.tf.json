@@ -1,22 +1,40 @@
 {
-    "variable": [
+  "variable": [
+    {
+      "name": [
         {
-            "name": [
-                {
-                    "type": "string",
-                    "default": "hello-world",
-                    "description": "Nombre del servidor local"
-                }
-            ]
-        },
-        {
-            "network": [
-                {
-                    "type": "string",
-                    "default": "lab-net",
-                    "description": "Nombre de la red local"
-                }
-            ]
+          "type": "string",
+          "default": "hello-world",
+          "description": "Nombre del servidor local"
         }
-    ]
+      ]
+    },
+    {
+      "network": [
+        {
+          "type": "string",
+          "default": "lab-net",
+          "description": "Nombre de la red local"
+        }
+      ]
+    },
+    {
+      "port": [
+        {
+          "type": "number",
+          "default": 8080,
+          "description": "Puerto del servidor local"
+        }
+      ]
+    },
+    {
+      "api_key": [
+        {
+          "type": "string",
+          "description": "Clave API para autentificación",
+          "sensitive": true
+        }
+      ]
+    }
+  ]
 }
