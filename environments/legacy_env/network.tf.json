@@ -1,0 +1,9 @@
+{
+    "variable": {
+        "port": {
+            "type": "string",
+            "default": "8080",
+            "description": "Puerto del servidor local"
+        }
+    }
+}
