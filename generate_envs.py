@@ -1,10 +1,18 @@
 import os, json
 from shutil import copyfile
 
+api_key = os.environ.get("API_KEY")
+if api_key is None:
+    raise Exception("No se obtuvo la variable de entorno API_KEY")
+
 # Parámetros de ejemplo para N entornos
-ENVS = [
-    {"name": f"app{i}", "network": f"net{i}"} for i in range(1, 11)
-]
+ENVS = []
+for i in range(1, 11):
+    if i == 3:
+        env = {"name": f"app{i}", "network": "net2-peered"}
+    else:
+        env = {"name": f"app{i}", "network": f"net{i}"}
+    ENVS.append(env)
 
 MODULE_DIR = "modules/simulated_app"
 OUT_DIR    = "environments"
@@ -25,11 +33,12 @@ def render_and_write(env):
             {
                 "null_resource": [
                     {
-                        env["name"]: [
+                        "local_server": [
                             {
                                 "triggers": {
                                     "name":    env["name"],
-                                    "network": env["network"]
+                                    "network": env["network"],
+                                    "port": "${var.port}"
                                 },
                                 "provisioner": [
                                     {
@@ -37,6 +46,7 @@ def render_and_write(env):
                                             "command": (
                                                 f"echo 'Arrancando servidor "
                                                 f"{env['name']} en red {env['network']}'"
+                                                "en el puerto ${var.port}"
                                             )
                                         }
                                     }
