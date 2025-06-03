@@ -1,0 +1,43 @@
+{
+    "resource": {
+        "null_resource": {
+            "local_server1": {
+                "triggers": {
+                    "name": "server1",
+                    "network": "${var.network}"
+                },
+                "provisioner": {
+                    "local-exec": {
+                        "command": "echo 'Arrancando local_server1 en red ${var.network}'"
+                    }
+                }
+            },
+            "local_server2": {
+                "triggers": {
+                    "name": "server2",
+                    "network": "${var.network}"
+                },
+                "provisioner": {
+                    "local-exec": {
+                        "command": "echo 'Arrancando local_server2 en red ${var.network}'"
+                    }
+                }
+            },
+            "load_balancer": {
+                "depends_on": [
+                    "null_resource.local_server1",
+                    "null_resource.local_server2"
+                ],
+                "triggers": {
+                    "name": "load_balancer",
+                    "network": "${var.network}"
+                },
+                "provisioner": {
+                    "local-exec": {
+                        "command": "echo 'Arrancando load_balancer para ${var.network}'"
+                    }
+                }
+            }
+        }
+    }
+}
