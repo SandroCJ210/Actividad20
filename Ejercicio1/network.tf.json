@@ -1,0 +1,9 @@
+{
+    "variable": {
+        "network": {
+            "type": "string",
+            "default": "local-net",
+            "description": "Nombre de la red local"
+        }
+    }
+}
