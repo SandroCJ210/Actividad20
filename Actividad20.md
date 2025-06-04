@@ -387,6 +387,119 @@ api_key = os.environ.get("API_KEY")
 if api_key is None:
     raise Exception("No se obtuvo la variable de entorno API_KEY")
 ```
+
+
+# Fase 4
+
+## Detección de Drift
+
+Para detectar los casos de *drift*, en los que el estado deseado y el actual están diferenciados, se usa `terraform plan`, el cual comparará el archivo de estado de Terraform con los recursos desplegados. Dependiendo de los cambios que se quieran realizar, se puede usar `terraform apply` para regresar al estado deseado.
+
+![image](img/image-6.png)
+
+## Migración de Legacy
+
+La migración de Legacy se llevó a cabo migrando un archivo de configuración `config.cfg` y un script de arranque `run.sh` a una estructura equivalente en Terraform. Esto representa el paso de archivos imperativos, como los del script, a archivos declarativos de configuración de Terraform. Esto mejora su reproducibilidad y versionamiento en comparación a scripts.
+
+Pare verificar que no hay diferencia, se ejecuta `terraform plan` para comparar el estado generado con el esperado.
+
+![image](img/image-12.png)
+
+## Estructura limpia, módulos, variables sensibles
+
+### Control de versiones claro
+
+Para comunicar efectivamente el propósito y lo que se hizo en cada commit, se sigue la convención de colocar primero lo que se hizo en el commit en una sola palabra (refactor, fix, feat, etc...) y describir brevemente esta acción.
+
+![image](img/image-17.png)
+
+### Linting y formateo
+
+Para esto se usó la herramienta `jq` para dar un formato estandarizado a los archivos .json. En particular, esto redujo el tamaño de las tabulaciones y compactó los archivos .json, haciéndolos un poco más fáciles de leer para las personas.
+
+
+Antes:
+```json
+{
+    "variable": [
+        {
+            "name": [
+                {
+                    "type": "string",
+                    "default": "hello-world",
+                    "description": "Nombre del servidor local"
+                }
+            ]
+        },
+        ...
+```
+
+
+Después:
+```json
+{
+  "variable": [
+    {
+      "name": [
+        {
+          "type": "string",
+          "default": "hello-world",
+          "description": "Nombre del servidor local"
+        }
+      ]
+    },
+    ...
+```
+
+
+### Nomenclatura de recursos
+
+El nombre de los recursos pasa a ser más expresivo y significativo en lugar de tan solo "null\_resource". Esto facilita a su lectura, mantenimiento y documentación. En particular, se cambió "null\_resource" por "local\_server" en `main.tf.json`.
+
+### Variables y constantes
+
+Se reescribe el código para parametrizar la variable `port` de `network.tf.json`. De esta forma, se evita "hardcodear" variables en el código y se mejora la gestión de versiones, ya que se puede revisar directamente esta variable como tal y no como parte de una cadena final o, en este caso, como un comando.
+
+### Parametrizar dependencias
+
+Se generan *environments* simples con una dependencia hecha explícita, de modo que `env3` dependa de `env2`. Este orden secuencial simula lo que se espera de las dependencias de un ambiente real, las cuales pueden expandirse a través de ambientes y deben ser lidiadas de forma secuencial.
+
+### Mantener en secreto
+
+Se manejan secretos mediante `os.environ` y un archivo de configuración que declara a la clave de API como secreta, sin darle ningún valor por defecto. De este modo, esta clave (cuyo filtrado puede tener consecuencias graves para la empresa), nunca es expuesta en el código y solo es manejada por el equipo de desarrollo.
+
+Todas estas medidas refuerzan nuestro IaC mediante control de versiones y cambios, flexibilidad, seguridad y código limpio.
+
+### Preguntas abiertas
+
+1. ¿Cómo extenderías este patrón para 50 módulos y 100 entornos?
+
+    Entre algunas opciones, se pueden usar:
+    
+    - Jinja2 de Python o `templatefile` de Terraform para parametrizar la generación de archivos JSON mediante "templates" o archivos base con información repetible entre archivos.
+    - Declarar archivos de configuración donde defina los entornos y módulos a generar y se pueda repetir 100 veces.
+    - Modificar el script de Python para la generación de estos entornos y módulos.
+    
+2. ¿Qué prácticas de revisión de código aplicarías a los .tf.json?
+   
+   Pese a que el código sea generado automáticamente, los cambios hechos por personas pueden variar su estado y ameritar revisiones periódicas. Algunas maneras son:
+   
+   - Validación automática mediante `terraform validate`, `terraform fmt` y `jq`.
+   - Revisar que las variables sean descriptivas y no genéricas.
+   - Revisar el historial de modificaciones en commits o en PRs para analizar cambios.
+   - Usar `terraform plan` para analizar cualquier drift que se haya generado.
+   
+3. ¿Cómo gestionarías secretos en producción (sin Vault)?
+
+    - Se pueden usar variables de Terraform marcadas como confidenciales y TF_VARS como variables de entorno para no hardcodearlas en las configuraciones, sino que sean descritas por el desarrollador.
+    - Se pueden usar archivos locales no versionados con los secretos necesarios.
+    
+4. ¿Qué workflows de revisión aplicarías a los JSON generados?
+   
+   - Se pueden limitar PRs que no tengan archivos generados por el script de Python o de alguna otra forma acordada.
+   - Se pueden usar flujos en CI que corran `terraform validate`, `terraform fmt`, `terraform plan` y `jq`, los cuales fallan el build en caso de errores.
+   - En hooks pre-commit se puede usar `jq` por su rapidez de ejecución.
+
 ## Ejercicios
 
 1. **Drift avanzado**
