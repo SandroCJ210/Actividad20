@@ -102,4 +102,15 @@ def render_and_write(env):
 
 if __name__ == "__main__":
     # Limpia entornos viejos (si quieres)
+    for env in ENVS:
+        render_and_write(env)
+    print(f"Generados {len(ENVS)} entornos en '{OUT_DIR}/'")
     set_up_and_generate_envs()
+
+# Ejercicio 5
+# Leer clave API en .config/secure.json (no versionado)
+def get_api_key():
+    config_path = os.path.join(os.path.dirname(__file__), '.config', 'secure.json')
+    with open(config_path) as f:
+        config = json.load(f)
+    return config.get('api_key')
