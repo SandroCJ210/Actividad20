@@ -635,13 +635,107 @@ Por último, con `terraform apply` terraform corrige el drift y observamos como 
 
    * Implementa un script que, al detectar cambios en `modules/simulated_app/`, regenere **todas** las carpetas bajo `environments/`.
    * Añade un hook de pre-commit que ejecute `jq --check` sobre los JSON.
+   
+   El script se crea en la carpeta Ejercicio4, como `detect_changes.py`.
+   
+  ```python
+def take_snapshot(directory):
+    snapshot = {}
+    for root, _, files in os.walk(directory):
+        for f in files:
+            path = os.path.join(root, f)
+            try:
+                stat = os.stat(path)
+                snapshot[path] = stat.st_mtime
+            except Exception:
+                pass
+    return snapshot
+
+def compress_snapshot(snapshot):
+    json_data = json.dumps(snapshot)
+    return zlib.compress(json_data.encode("utf-8"))
+
+def decompress_snapshot(data):
+    json_data = zlib.decompress(data).decode("utf-8")
+    return json.loads(json_data)
+
+def load_previous_snapshot():
+    if not os.path.exists(SNAPSHOT_FILE):
+        return None
+    with open(SNAPSHOT_FILE, "rb") as f:
+        data = f.read()
+        return decompress_snapshot(data)
+
+def save_snapshot(snapshot):
+    data = compress_snapshot(snapshot)
+    with open(SNAPSHOT_FILE, "wb") as f:
+        f.write(data)
+
+def regenerate():
+    print("¡Cambios detectados! Regenerando...")
+    subprocess.run(["python", REGENERATE_SCRIPT])
+    print("Regeneración completada")
+
+def main():
+    current_snapshot = take_snapshot(WATCHED_DIR)
+    previous_snapshot = load_previous_snapshot()
+
+    if previous_snapshot != current_snapshot:
+        regenerate()
+        save_snapshot(current_snapshot)
+    else:
+        print("No se detectaron cambios. No se regenera nada.")
+``` 
+
+Esencialmente, lee los archivos de la carpeta `modules/simulated_apps/` y las comprime en un archivo `snapshot.bin`. Llamadas posteriores del script comparan el snapshot con el estado actual de los archivos mediante sus hashes. Si son diferentes, entonces se llama `generate_envs.py` para regenerar los ambientes nuevamentes.
+
+Para el hook pre-commit, este llama directamente al comando `jq` para verificar el formato de los archivos .json en `modules/simulated_apps/` (la bandera `--check` no existe).
+
+```bash
+#!/bin/bash
+
+TARGET_DIR="modules/simulated_app/"
+
+echo "Ejecutando jq  $TARGET_DIR..."
+
+find "$TARGET_DIR" -name "*.json" -print0 | while IFS= read -r -d '' file; do
+  if ! jq  . "$file" >/dev/null 2>&1; then
+    echo "❌ .json no válido en: $file"
+    exit 1
+  fi
+done
+
+echo "✅ ¡Archivos .json validados!"
+```
+
+Ejecución del hook:
+
+![image](img/image-16.png)
 
 5. **Compartición segura de secretos**
 
    * Diseña un mini-workflow donde `api_key` se lee de `~/.config/secure.json` (no versionado) y documenta cómo el equipo la distribuye sin comprometer seguridad.
+   
+   Se crea un archivo no versionado (documentado en .gitignore) en `.config/secure.json` con una clave API de prueba:
+   
+  ```json
+{
+  "api_key": "l33t_k3y"
+}
+``` 
 
+En el script de `generate_envs.py` ya se importan claves desde `os.environ`, pero también se puede crear una función que implemente la lectura de la clave API a modo de workflow.
 
+```python
+# Ejercicio 5
+# Leer clave API en .config/secure.json (no versionado)
+def get_api_key():
+    config_path = os.path.join(os.path.dirname(__file__), '.config', 'secure.json')
+    with open(config_path) as f:
+        config = json.load(f)
+    return config.get('api_key')
+```
 
+Para compartir este secreto sin comprometer la seguridad, se pueden usar administradores de contraseñas y secretos como 1Password que nos dan la opción de compartir elementos particulares de forma segura. Otra opción viable es usar la opción de manejo de secretos de GitHub y usar estas variables de forma dinámica durante la construcción o despliegue. En su defecto, se pueden compartir estas claves enviando mensajes por aplicaciones encriptadas E2E.
 
-
-
+Además, se debe documentar el uso de secretos en el código en documentación interna o directamente en el `README.md` para que quede claro en todo el equipo el uso de estas variables.
