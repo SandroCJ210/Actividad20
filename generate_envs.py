@@ -1,4 +1,5 @@
 import os, json
+import click
 from shutil import copyfile
 from jsonschema import validate, ValidationError
 api_key = os.environ.get("API_KEY")
@@ -6,13 +7,22 @@ api_key = os.environ.get("API_KEY")
 #    raise Exception("No se obtuvo la variable de entorno API_KEY")
 
 # Parámetros de ejemplo para N entornos
-ENVS = []
-for i in range(1, 11):
-    if i == 3:
-        env = {"name": f"app{i}", "network": "net2-peered"}
-    else:
-        env = {"name": f"app{i}", "network": f"net{i}"}
-    ENVS.append(env)
+   
+@click.command()
+@click.option("--count", default=10, help="Número de entornos a generar")
+@click.option("--prefix", default="app", help="Prefijo para los nombres de los entornos")
+@click.option("--port", default="${var.port}", help="Puerto para los entornos")
+def set_up_and_generate_envs(count, prefix, port):
+    ENVS = []
+    for i in range(1, count + 1):	
+        if i == 3:
+            env = {"name": f"{prefix}{i}", "network": "net2-peered", "port": f"{port}" }
+        else:
+            env = {"name": f"{prefix}{i}", "network": f"net{i}", "port": f"{port}" }
+        ENVS.append(env)
+    
+    for env in ENVS:    
+        render_and_write(env)   
 
 MODULE_DIR = "modules/simulated_app"
 OUT_DIR    = "environments"
@@ -59,7 +69,7 @@ def render_and_write(env):
                                 "triggers": {
                                     "name":    env["name"],
                                     "network": env["network"],
-                                    "port": "${var.port}"
+                                    "port": env["port"]
                                 },
                                 "provisioner": [
                                     {
@@ -67,7 +77,7 @@ def render_and_write(env):
                                             "command": (
                                                 f"echo 'Arrancando servidor "
                                                 f"{env['name']} en red {env['network']}'"
-                                                "en el puerto ${var.port}"
+                                                f"en el puerto {env['port']}'"
                                             )
                                         }
                                     }
@@ -92,11 +102,10 @@ def render_and_write(env):
 
 if __name__ == "__main__":
     # Limpia entornos viejos (si quieres)
-
     for env in ENVS:
         render_and_write(env)
     print(f"Generados {len(ENVS)} entornos en '{OUT_DIR}/'")
-
+    set_up_and_generate_envs()
 
 # Ejercicio 5
 # Leer clave API en .config/secure.json (no versionado)

@@ -472,16 +472,164 @@ Por último, con `terraform apply` terraform corrige el drift y observamos como 
 ```
 2. **CLI Interactiva**
 
-   * Refactoriza `generate_envs.py` con `click` para aceptar:
+   Se usó el paquete clicks para poder recibir parámetros a través de la consola. Además se modificó el diccionario ENVS para que tenga un tercer elemento que haga referencia al puerto del servidor del enviroment. Para obtener los parámetros se implementó la siguiente función:
 
-     ```bash
-     python generate_envs.py --count 3 --prefix staging --port 3000
-     ```
+   ```python
+    @click.command()
+    @click.option("--count", default=10, help="Número de entornos a generar")
+    @click.option("--prefix", default="app", help="Prefijo para los nombres de los entornos")
+    @click.option("--port", default="${var.port}", help="Puerto para los entornos")
+    def set_up_and_generate_envs(count, prefix, port):
+        ENVS = []
+        for i in range(1, count + 1):	
+            if i == 3:
+                env = {"name": f"{prefix}{i}", "network": "net2-peered", "port": f"{port}" }
+            else:
+                env = {"name": f"{prefix}{i}", "network": f"net{i}", "port": f"{port}" }
+            ENVS.append(env)
+        
+        for env in ENVS:    
+            render_and_write(env) 
+   ```
+
+   También se modificó config para que command reciba env["port"] en vez de "${var.port}". Y por último se modificó main para que solo llame a la función set_up_and_generate_envs()
 
 3. **Validación de Esquema JSON**
 
-   * Diseña un JSON Schema que valide la estructura de ambos TF files.
-   * Lanza la validación antes de escribir cada archivo en Python.
+   Se hicieron dos JSON schema para realizar la validación de jsons. Estos son los siguientes:
+
+   main_schema.json:
+   ```json
+    {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Schema for main.tf.json",
+    "type": "object",
+    "properties": {
+        "resource": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+            "null_resource": {
+                "type": "array",
+                "items": {
+                "type": "object",
+                "properties": {
+                    "local_server": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                        "triggers": {
+                            "type": "object",
+                            "properties": {
+                            "name": { "type": "string" },
+                            "network": { "type": "string" },
+                            "port": { "type": "string" }
+                            },
+                            "required": ["name", "network", "port"],
+                            "additionalProperties": false
+                        },
+                        "provisioner": {
+                            "type": "array",
+                            "items": {
+                            "type": "object",
+                            "properties": {
+                                "local-exec": {
+                                "type": "object",
+                                "properties": {
+                                    "command": { "type": "string" }
+                                },
+                                "required": ["command"],
+                                "additionalProperties": false
+                                }
+                            },
+                            "required": ["local-exec"],
+                            "additionalProperties": false
+                            }
+                        }
+                        },
+                        "required": ["triggers", "provisioner"],
+                        "additionalProperties": false
+                    }
+                    }
+                },
+                "required": ["local_server"],
+                "additionalProperties": false
+                }
+            }
+            },
+            "required": ["null_resource"],
+            "additionalProperties": false
+        }
+        }
+    },
+    "required": ["resource"],
+    "additionalProperties": false
+    }
+   ```
+
+   network_schema.json:
+   ```json
+   {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Schema for network.tf.json",
+    "type": "object",
+    "properties": {
+        "variable": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "patternProperties": {
+            "^(name|network|port|api_key)$": {
+                "type": "array",
+                "items": {
+                "type": "object",
+                "properties": {
+                    "type": { "type": "string" },
+                    "default": { },
+                    "description": { "type": "string" },
+                    "sensitive": { "type": "boolean" }
+                },
+                "required": ["type", "description"],
+                "additionalProperties": false
+                }
+            }
+            },
+            "additionalProperties": false
+        }
+        }
+    },
+    "required": ["variable"],
+    "additionalProperties": false
+    }
+   ```
+
+   Ambos usan el estándar 2020-12. 
+
+   Además, para realizar la validación en python se usó la librería jsonschema y su función validate()
+
+   ```python
+        # Validación de network.tf.json
+        network_dst = os.path.join(env_dir, "network.tf.json")
+       
+        with open(network_dst) as f:
+            network_data = json.load(f)
+        try:
+            validate(instance=network_data, schema=network_schema)
+            print(f"network.tf.json válido para {env['name']}")
+        except ValidationError as e:
+            print(f"Error en network.tf.json para {env['name']}: {e.message}")
+            exit(1)
+
+        # Validación de main.tf.json
+        try:
+            validate(instance=config, schema=main_schema)
+            print(f"main.tf.json válido para {env['name']}")
+        except ValidationError as e:
+            print(f"Error en main.tf.json para {env['name']}: {e.message}")
+            exit(1)
+   ```
 
 4. **GitOps Local**
 
