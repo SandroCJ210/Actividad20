@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schema for main.tf.json",
+  "type": "object",
+  "properties": {
+    "resource": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "null_resource": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "local_server": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "triggers": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "network": { "type": "string" },
+                          "port": { "type": "string" }
+                        },
+                        "required": ["name", "network", "port"],
+                        "additionalProperties": false
+                      },
+                      "provisioner": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "local-exec": {
+                              "type": "object",
+                              "properties": {
+                                "command": { "type": "string" }
+                              },
+                              "required": ["command"],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": ["local-exec"],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": ["triggers", "provisioner"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["local_server"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["null_resource"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["resource"],
+  "additionalProperties": false
+}

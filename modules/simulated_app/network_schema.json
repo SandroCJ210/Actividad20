@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Schema for network.tf.json",
+  "type": "object",
+  "properties": {
+    "variable": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "patternProperties": {
+          "^(name|network|port|api_key)$": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "default": { },
+                "description": { "type": "string" },
+                "sensitive": { "type": "boolean" }
+              },
+              "required": ["type", "description"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["variable"],
+  "additionalProperties": false
+}
