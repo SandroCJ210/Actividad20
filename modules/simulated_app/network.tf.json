@@ -1,22 +1,25 @@
 {
-    "variable": [
+  "resource": [
+    {
+      "null_resource": [
         {
-            "name": [
+          "hello-server": [
+            {
+              "triggers": {
+                "name": "${var.name}",
+                "network": "${var.network}"
+              },
+              "provisioner": [
                 {
-                    "type": "string",
-                    "default": "hello-world",
-                    "description": "Nombre del servidor local"
+                  "local-exec": {
+                    "command": "echo 'Arrancando servidor ${var.name} en red ${var.network}'"
+                  }
                 }
-            ]
-        },
-        {
-            "network": [
-                {
-                    "type": "string",
-                    "default": "lab-net",
-                    "description": "Nombre de la red local"
-                }
-            ]
+              ]
+            }
+          ]
         }
-    ]
+      ]
+    }
+  ]
 }
