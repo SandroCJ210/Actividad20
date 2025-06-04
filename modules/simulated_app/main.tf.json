@@ -7,7 +7,8 @@
             {
               "triggers": {
                 "name": "${var.name}",
-                "network": "${var.network}"
+                "network": "${var.network}",
+                "port": "${var.port}"
               },
               "provisioner": [
                 {
